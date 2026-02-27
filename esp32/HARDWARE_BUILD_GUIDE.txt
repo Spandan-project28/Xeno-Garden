@@ -1,0 +1,254 @@
+================================================================
+  XENO GARDEN — HARDWARE BUILD GUIDE
+  IoT Smart Drip Irrigation System
+================================================================
+
+This guide walks you through building the complete hardware
+system that works with the Xeno Garden app and backend.
+
+
+================================================================
+  COMPONENTS LIST (Bill of Materials)
+================================================================
+
+Qty   Component                        Approx Cost (INR)
+----  -------------------------------- -----------------
+1     ESP32 Dev Board (30-pin)         ₹350-500
+1     Capacitive Soil Moisture Sensor  ₹100-150
+1     DHT11 Temp + Humidity Module     ₹80-120
+1     Rain Sensor Module (with board)  ₹60-100
+1     Analog pH Sensor Module          ₹800-1200
+1     5V Relay Module (1-channel)      ₹50-80
+1     12V DC Mini Water Pump           ₹150-250
+1     12V Power Adapter (2A)           ₹150-200
+1     Breadboard (830 points)          ₹100
+1     Jumper Wires (M-M, M-F pack)    ₹80-100
+1     USB Cable (Micro-USB for ESP32)  ₹50
+1     Plastic Container (water tank)   ₹50-100
+--    Drip tubing + connectors         ₹100-200
+                                       ---------------
+                              TOTAL:   ₹2,000 - ₹3,200
+
+
+================================================================
+  PIN MAPPING (matches config.h)
+================================================================
+
+ESP32 GPIO Pin     Component                Wire Color Guide
+--------------     ----------------------   ----------------
+GPIO 34            Soil Moisture → AO        Yellow (Analog)
+GPIO 35            pH Sensor → AO            Orange (Analog)
+GPIO 4             DHT11 → DATA              Green (Digital)
+GPIO 5             Rain Sensor → DO          Blue (Digital)
+GPIO 2             Relay → IN                White (Control)
+3.3V               DHT11 VCC, Rain VCC       Red
+5V (VIN)           Soil Moisture VCC         Red
+                   pH Sensor VCC             Red
+GND                All sensor GNDs           Black
+
+
+================================================================
+  STEP-BY-STEP ASSEMBLY
+================================================================
+
+STEP 1: PREPARE THE BREADBOARD
+-------------------------------
+- Place the ESP32 on the breadboard (centered)
+- Connect ESP32's GND pin to breadboard ground rail
+- Connect ESP32's 3.3V to breadboard positive rail
+- Connect ESP32's VIN (5V) to a separate positive rail
+
+
+STEP 2: SOIL MOISTURE SENSOR
+------------------------------
+Sensor has 3 pins: VCC, GND, AO (Analog Out)
+
+  Sensor Pin    →    Connect To
+  VCC           →    5V rail (VIN)
+  GND           →    GND rail
+  AO            →    ESP32 GPIO 34
+
+Placement:
+- Insert the sensor prongs into the soil
+- Keep the circuit board ABOVE ground (away from water)
+- Depth: Insert 2/3 of the prong length into soil
+
+
+STEP 3: DHT11 (TEMPERATURE + HUMIDITY)
+----------------------------------------
+Module has 3 pins: VCC, DATA, GND
+(If using raw DHT11 with 4 pins, ignore the NC pin)
+
+  Sensor Pin    →    Connect To
+  VCC           →    3.3V rail
+  DATA          →    ESP32 GPIO 4
+  GND           →    GND rail
+
+Placement:
+- Mount in open air, away from direct sunlight
+- Keep away from the water pump and tubing
+- Should face the field/crop area
+
+
+STEP 4: RAIN SENSOR
+---------------------
+Has 2 parts: detection board + control board
+Control board has 4 pins: VCC, GND, DO, AO
+
+  Sensor Pin    →    Connect To
+  VCC           →    3.3V rail
+  GND           →    GND rail
+  DO            →    ESP32 GPIO 5
+
+Placement:
+- Mount the detection board FACING UP (sky)
+- Keep at an angle (~30°) so water slides off
+- Place outdoors, exposed to sky
+- Control board stays dry (near ESP32)
+
+
+STEP 5: pH SENSOR
+-------------------
+Has 2 parts: pH probe + circuit board
+Circuit board pins: VCC, GND, AO
+
+  Sensor Pin    →    Connect To
+  VCC           →    5V rail (VIN)
+  GND           →    GND rail
+  AO            →    ESP32 GPIO 35
+
+  pH probe BNC connector → Circuit board BNC socket
+
+Placement:
+- Submerge pH probe in the water supply / tank
+- Do NOT let water touch the circuit board
+- Calibrate before first use (see calibration section)
+
+IMPORTANT: pH probes need calibration!
+- Use pH 4.0 and pH 7.0 buffer solutions
+- Adjust PH_OFFSET in config.h after calibration
+
+
+STEP 6: RELAY + WATER PUMP
+----------------------------
+Relay module has 3 pins: VCC, GND, IN (signal)
+Relay also has a screw terminal: COM, NO, NC
+
+  Relay Pin     →    Connect To
+  VCC           →    5V rail (VIN)
+  GND           →    GND rail
+  IN            →    ESP32 GPIO 2
+
+Pump wiring through relay:
+
+  12V Adapter (+) ──→ Relay COM terminal
+  Relay NO terminal ──→ Pump (+) positive wire
+  Pump (-) negative ──→ 12V Adapter (-)
+
+When relay activates: COM connects to NO → pump runs
+When relay off: circuit is broken → pump stops
+
+Placement:
+- Pump goes INSIDE the water tank/container
+- Route drip tubing from pump output to plant area
+- Keep relay module DRY and near the ESP32
+- 12V adapter plugs into wall socket
+
+
+STEP 7: POWER
+---------------
+Option A (Development):
+  - ESP32 powered via USB from laptop/PC
+  - 12V adapter for pump only
+
+Option B (Deployment):
+  - ESP32 powered via USB phone charger (5V 2A)
+  - 12V adapter for pump
+  - Both plug into a power strip
+
+
+================================================================
+  COMPLETE WIRING SUMMARY
+================================================================
+
+    ┌─────────────────────────────────────────┐
+    │              ESP32 Dev Board            │
+    │                                         │
+    │  3.3V ──→ DHT11 VCC, Rain VCC          │
+    │  VIN  ──→ Soil VCC, pH VCC, Relay VCC  │
+    │  GND  ──→ All GNDs                     │
+    │                                         │
+    │  GPIO 34 ←── Soil Moisture AO           │
+    │  GPIO 35 ←── pH Sensor AO              │
+    │  GPIO 4  ←── DHT11 DATA                │
+    │  GPIO 5  ←── Rain Sensor DO            │
+    │  GPIO 2  ──→ Relay IN                  │
+    │                                         │
+    └─────────────────────────────────────────┘
+
+    12V Adapter ──→ Relay COM
+    Relay NO ──→ Pump (+)
+    Pump (-) ──→ 12V Adapter (-)
+
+
+================================================================
+  CALIBRATION
+================================================================
+
+1. SOIL MOISTURE CALIBRATION
+   - Hold sensor in AIR → note the ADC value → set SOIL_DRY_VALUE
+   - Dip sensor in WATER → note ADC value → set SOIL_WET_VALUE
+   - Update values in config.h
+   - Open Serial Monitor (115200 baud) to see raw readings
+
+2. pH CALIBRATION
+   - Dip probe in pH 7.0 buffer solution
+   - Note the reading on Serial Monitor
+   - Adjust PH_OFFSET in config.h until it reads 7.0
+   - Verify with pH 4.0 buffer solution
+   - Re-adjust if needed
+
+3. RAIN SENSOR
+   - Dry board should give HIGH on DO (no rain)
+   - Wet board should give LOW on DO (rain detected)
+   - Adjust sensitivity potentiometer on control board
+
+
+================================================================
+  TESTING CHECKLIST
+================================================================
+
+[ ] ESP32 powered on, Serial Monitor shows boot message
+[ ] WiFi connects successfully (shows IP address)
+[ ] Soil moisture reads 0-100% range
+[ ] DHT11 shows valid temperature and humidity
+[ ] Rain sensor shows false (dry) / true (wet)
+[ ] pH sensor reads in 0-14 range
+[ ] Backend receives data (check http://localhost:5000/api/sensor-data/latest)
+[ ] Pump turns ON when relay activates
+[ ] Pump turns OFF when relay deactivates
+[ ] Mobile app shows live sensor data
+[ ] Automation triggers correctly based on thresholds
+
+
+================================================================
+  TROUBLESHOOTING
+================================================================
+
+Problem: WiFi won't connect
+Fix: Double-check SSID/password in config.h. Ensure 2.4GHz network (ESP32 doesn't support 5GHz).
+
+Problem: Soil moisture always reads 0 or 100
+Fix: Recalibrate SOIL_DRY_VALUE and SOIL_WET_VALUE in config.h.
+
+Problem: DHT11 shows -999
+Fix: Check wiring. Try a 10K pull-up resistor between DATA and VCC.
+
+Problem: pH readings are wrong
+Fix: Calibrate with buffer solutions. Clean the probe tip.
+
+Problem: Pump doesn't turn on
+Fix: Check relay wiring. Test relay independently with 5V on IN pin. Verify PUMP_ON is set correctly in config.h (HIGH or LOW depending on relay type).
+
+Problem: Backend not receiving data
+Fix: Check SERVER_URL in config.h matches your PC's IP. Ensure both ESP32 and PC are on the same WiFi network.
