@@ -1,0 +1,35 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Python (legacy)
+__pycache__/
+.venv/
+venv/
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite3
