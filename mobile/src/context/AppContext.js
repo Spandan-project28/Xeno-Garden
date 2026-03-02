@@ -23,7 +23,7 @@ export const AppProvider = ({ children }) => {
     const [alerts, setAlerts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [deviceId, setDeviceId] = useState("esp32-field-01");
+    const [deviceId, setDeviceId] = useState("esp8266-field-01");
 
     // ---- Thresholds (configurable from Settings) ----
     const [thresholds, setThresholds] = useState({

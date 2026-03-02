@@ -1,0 +1,287 @@
+================================================================
+  XENO GARDEN — HOW TO CONNECT ESP8266 TO THE APP VIA WiFi
+  TESTING BUILD: 2 Sensors (Soil Moisture + Rain)
+================================================================
+
+  This guide explains step-by-step how your ESP8266
+  sends sensor data to your mobile app through WiFi.
+
+
+================================================================
+  HOW IT WORKS (The Big Picture)
+================================================================
+
+  Your system has 3 parts that talk to each other:
+
+  ┌──────────┐     WiFi      ┌──────────┐     WiFi      ┌──────────┐
+  │  ESP8266  │ ──────────→  │  Backend  │  ←──────────  │  Mobile  │
+  │ (Sensors) │   sends      │  Server   │   requests    │   App    │
+  │           │   data       │ (Node.js) │   data        │          │
+  └──────────┘               └──────────┘               └──────────┘
+       │                          │                          │
+  Reads sensors           Stores data in              Shows data on
+  every 10 sec            database (SQLite)           your phone
+
+  KEY POINT: The ESP8266 does NOT connect directly to your phone.
+  Instead, all three devices connect to the SAME WiFi router:
+
+                      ┌─────────────┐
+                      │  WiFi Router │
+                      │   (2.4GHz)   │
+                      └──────┬──────┘
+                    ┌────────┼────────┐
+                    │        │        │
+               ┌────┴───┐ ┌─┴──────┐ ┌┴───────┐ 
+               │ ESP8266 │ │Computer│ │ Phone  │
+               │         │ │(Server)│ │ (App)  │
+               └─────────┘ └────────┘ └────────┘
+
+
+================================================================
+  STEP-BY-STEP SETUP
+================================================================
+
+
+────────────────────────────────────────────────────────────────
+  STEP 1: Find Your Computer's IP Address
+────────────────────────────────────────────────────────────────
+
+  Your computer runs the backend server. The ESP8266 needs
+  to know your computer's IP address to send data to it.
+
+  On Windows:
+    1. Press Win + R
+    2. Type "cmd" and press Enter
+    3. Type: ipconfig
+    4. Look for "IPv4 Address" under your WiFi adapter
+    5. It looks like: 192.168.1.5 or 192.168.0.100
+
+  On Mac:
+    1. Open System Preferences → Network
+    2. Click WiFi → look for "IP Address"
+
+  ⚠ WRITE DOWN YOUR IP ADDRESS — you'll need it in Step 3!
+
+
+────────────────────────────────────────────────────────────────
+  STEP 2: Start the Backend Server
+────────────────────────────────────────────────────────────────
+
+  Open a terminal/command prompt in the backend folder and run:
+
+    cd "e:\sip website\test1\backend"
+    npm start
+
+  You should see:
+    🌱 IoT Drip Irrigation API is running
+    Server running on port 5000
+
+  Test it by opening this in your browser:
+    http://localhost:5000/api/health
+
+  You should see:
+    { "success": true, "message": "🌱 IoT Drip Irrigation API is running" }
+
+  ⚠ Keep this terminal OPEN — the server must be running!
+
+
+────────────────────────────────────────────────────────────────
+  STEP 3: Configure the ESP8266 Code
+────────────────────────────────────────────────────────────────
+
+  Open the file: esp32/esp8266_firmware/esp8266_config.h
+
+  Change these 3 things:
+
+  1. WiFi Name:
+     #define WIFI_SSID     "YOUR_WIFI_NAME"
+     ↓ Change to your actual WiFi name:
+     #define WIFI_SSID     "MyHomeWiFi"
+
+  2. WiFi Password:
+     #define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
+     ↓ Change to your actual WiFi password:
+     #define WIFI_PASSWORD "MyPassword123"
+
+  3. Server URL (use YOUR IP from Step 1):
+     #define SERVER_URL    "http://YOUR_PC_IP:5000/api/sensor-data"
+     ↓ Change to your actual IP:
+     #define SERVER_URL    "http://192.168.1.5:5000/api/sensor-data"
+
+  ⚠ CRITICAL RULES:
+     • WiFi MUST be 2.4GHz (ESP8266 cannot see 5GHz networks)
+     • WiFi name and password are CASE SENSITIVE
+     • The IP address must be your COMPUTER's IP, not your phone's
+
+
+────────────────────────────────────────────────────────────────
+  STEP 4: Install Arduino IDE Libraries
+────────────────────────────────────────────────────────────────
+
+  In Arduino IDE, install these libraries:
+
+  A) Add ESP8266 Board Support:
+     1. File → Preferences
+     2. In "Additional Board Manager URLs" add:
+        http://arduino.esp8266.com/stable/package_esp8266com_index.json
+     3. Click OK
+     4. Tools → Board → Board Manager
+     5. Search "ESP8266" → Install "esp8266 by ESP8266 Community"
+
+  B) Install Libraries (Sketch → Include Library → Manage Libraries):
+     1. Search "ArduinoJson" → Install by Benoit Blanchon (v7+)
+     NOTE: No DHT or LCD libraries needed for this 2-sensor test!
+
+  C) Select Board:
+     1. Tools → Board → ESP8266 Boards → NodeMCU 1.0 (ESP-12E Module)
+     2. Tools → Upload Speed → 115200
+     3. Tools → Port → Select your COM port (e.g., COM3, COM5)
+
+  ⚠ If you don't see any COM port:
+     - Install CH340 USB driver (Google: "CH340 driver download")
+     - Unplug and replug the NodeMCU USB cable
+     - Try a different USB cable (some are charge-only!)
+
+
+────────────────────────────────────────────────────────────────
+  STEP 5: Upload Code to ESP8266
+────────────────────────────────────────────────────────────────
+
+  1. Open esp32/esp8266_firmware/esp8266_firmware.ino in Arduino IDE
+  2. Click the Upload button (→ arrow icon)
+  3. Wait for "Done uploading"
+  4. Open Serial Monitor (🔍 icon, top right)
+  5. Set baud rate to 115200
+
+  You should see:
+    ========================================
+      🌱 XENO GARDEN — ESP8266 Firmware
+      TESTING MODE: 2 Sensors Only
+      Soil Moisture (A0) + Rain (D6)
+    ========================================
+    ✅ Soil Moisture sensor ready (Pin A0)
+    ✅ Rain sensor ready (Pin D6 / GPIO 12)
+    📡 Connecting to WiFi: MyHomeWiFi
+    ..........
+    ✅ WiFi connected!
+       IP Address: 192.168.1.25
+    🚀 Setup complete! Starting sensor loop...
+
+    📊 ─── Sensor Reading #1 ───
+       Soil Moisture: 45.2%
+       Rain:          NO
+       📤 Sending to: http://192.168.1.5:5000/api/sensor-data
+       ✅ Data sent to app successfully!
+
+
+────────────────────────────────────────────────────────────────
+  STEP 6: Configure the Mobile App
+────────────────────────────────────────────────────────────────
+
+  The mobile app needs to know the server IP too.
+
+  Open: mobile/src/config/api.js (or similar config file)
+
+  Change the API_URL to your computer's IP:
+    const API_URL = "http://192.168.1.5:5000/api";
+
+  ⚠ Use the SAME IP address you used in Step 3!
+
+  Then run the app:
+    cd mobile
+    npx expo start
+
+  Or if using React Native CLI:
+    npx react-native run-android
+
+
+────────────────────────────────────────────────────────────────
+  STEP 7: Verify Everything Works
+────────────────────────────────────────────────────────────────
+
+  Check these things in order:
+
+  [  ] Serial Monitor shows sensor readings every 10 seconds
+  [  ] Serial Monitor shows "✅ Data sent to app successfully!"
+  [  ] Backend terminal shows incoming POST requests
+  [  ] Mobile app dashboard shows live sensor values
+  [  ] Soil moisture and rain values update every 10 seconds
+  [  ] Temperature shows 25°C and humidity shows 50% (defaults)
+
+
+================================================================
+  TESTING TIPS
+================================================================
+
+  TEST SOIL MOISTURE:
+    • Hold sensor in AIR → should show ~0-15% (dry)
+    • Dip in WATER → should show ~80-100% (wet)
+    • In soil → should show 30-60% (depends on moisture)
+
+  TEST RAIN SENSOR:
+    • Dry board → Rain: NO
+    • Put water drops on it → Rain: YES
+    • Wipe it dry → Rain: NO again
+
+  TEST APP CONNECTION:
+    • Open browser: http://YOUR_IP:5000/api/sensor-data/latest
+    • Should show the latest sensor reading as JSON
+    • App dashboard should match these values
+
+  NOTE: Temperature, humidity, and pH will show default values
+  (25°C, 50%, 7.0) since those sensors aren't connected yet.
+
+
+================================================================
+  COMMON PROBLEMS & SOLUTIONS
+================================================================
+
+  ❌ "WiFi connection FAILED"
+  → Make sure WiFi is 2.4GHz (not 5GHz)
+  → Double-check SSID and password spelling
+  → Move ESP8266 closer to router
+
+  ❌ "HTTP Error: -1" (can't reach backend)
+  → Is the backend server running? (npm start)
+  → Is the IP address correct in esp8266_config.h?
+  → Are ALL devices on the SAME WiFi network?
+  → Windows Firewall might be blocking — allow Node.js
+
+  ❌ Soil moisture reads 0 or 1024 constantly
+  → Check A0 wiring
+  → Check VCC is connected to red rail
+
+  ❌ Rain sensor always shows same value
+  → Check 2-wire cable between sensing board and control board
+  → Adjust the potentiometer on the control board
+
+  ❌ App not showing data
+  → Check api.js has the correct server IP
+  → Phone must be on SAME WiFi as computer
+  → Open http://YOUR_IP:5000/api/sensor-data/latest in browser
+
+  ❌ Windows Firewall blocking connection
+  → Open Windows Defender Firewall
+  → Click "Allow an app through firewall"
+  → Find Node.js → check both Private and Public
+  → Or temporarily disable firewall for testing
+
+
+================================================================
+  QUICK CHECKLIST BEFORE TESTING
+================================================================
+
+  [  ] WiFi router is on and broadcasting 2.4GHz
+  [  ] Computer is connected to WiFi
+  [  ] Phone is connected to SAME WiFi
+  [  ] Backend server is running (npm start)
+  [  ] ESP8266 has correct WiFi credentials in config
+  [  ] ESP8266 has correct server IP in config
+  [  ] Mobile app has correct server IP in config
+  [  ] Soil Moisture sensor wired: VCC→Red Rail, GND→GND, A0→A0
+  [  ] Rain Sensor wired: VCC→Red Rail, GND→GND, D0→D6
+  [  ] Serial Monitor is open at 115200 baud
+
+================================================================
+  END OF GUIDE — Happy Testing! 🌱📱
+================================================================
